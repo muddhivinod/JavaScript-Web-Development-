@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Interactive Product Inventory & Analytics Dashboard</title>
+  <style>
+    :root { font-family: Arial, sans-serif; color: #172033; background: #f4f7fb; }
+    body { margin: 0; padding: 24px; }
+    main { max-width: 1000px; margin: auto; }
+    h1 { margin-bottom: 6px; }
+    .sub { color: #58657a; margin-top: 0; }
+    .panel { background: white; border: 1px solid #e0e6ef; border-radius: 14px; padding: 20px; margin: 18px 0; }
+    form { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+    label { display: grid; gap: 6px; font-size: 14px; font-weight: 600; flex: 1; min-width: 180px; }
+    input, button { font: inherit; padding: 11px 12px; border-radius: 8px; border: 1px solid #cbd5e1; }
+    button { background: #1d4ed8; color: white; border: 0; cursor: pointer; font-weight: 700; }
+    button:hover { background: #1e40af; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .stat { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; }
+    .stat strong { display: block; font-size: 24px; margin-top: 8px; overflow-wrap: anywhere; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #e5eaf1; }
+    th { background: #f8fafc; }
+    .badge { display: inline-block; padding: 4px 8px; border-radius: 999px; font-size: 12px; background: #e2e8f0; }
+    .message { min-height: 20px; color: #b91c1c; }
+    code { white-space: pre-wrap; overflow-wrap: anywhere; }
+    @media (max-width: 600px) { body { padding: 12px; } .panel { padding: 14px; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Product Inventory & Analytics Dashboard</h1>
+  <p class="sub">JavaScript internship capstone mini project</p>
+
+  <section class="panel">
+    <h2>Add a product</h2>
+    <form id="productForm">
+      <label>Product name
+        <input id="productName" type="text" placeholder="e.g., Monitor" required maxlength="60">
+      </label>
+      <label>Price (₹)
+        <input id="productPrice" type="number" placeholder="e.g., 150" required min="0.01" step="0.01">
+      </label>
+      <button type="submit">Add product</button>
+    </form>
+    <p id="message" class="message" role="status"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Financial analytics</h2>
+    <div class="stats">
+      <div class="stat">Products in inventory<strong id="productCount">2</strong></div>
+      <div class="stat">Total inventory value<strong id="totalValue">₹825.00</strong></div>
+      <div class="stat">Estimated tax (18%)<strong id="taxValue">₹148.50</strong></div>
+      <div class="stat">After 10% discount<strong id="discountValue">₹742.50</strong></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Inventory roster (forEach)</h2>
+    <table>
+      <thead><tr><th>Product</th><th>Price</th><th>Category</th></tr></thead>
+      <tbody id="inventoryBody"></tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <h2>Affordable products (under ₹200, filter)</h2>
+    <p id="affordableList"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Formatted report (map)</h2>
+    <code id="formattedReport"></code>
+  </section>
+</main>
+<script>
+"use strict";
+
+// 1. Data initialization: pre-existing products are stored as objects in an array.
+const inventory = [
+  { name: "Laptop", price: 800 },
+  { name: "Mouse", price: 25 }
+];
+
+// 2. Functions: regular function and arrow function with parameters.
+function calculateTotal(items) {
+  let total = 0;
+  items.forEach(item => { total += item.price; });
+  return total;
+}
+const calculateWithAdjustment = (amount, rate = 0) => amount + amount * rate;
+
+// Price category is assigned using if/else and switch.
+function getCategory(price) {
+  if (price < 50) return "Budget";
+  if (price < 200) return "Standard";
+  return "Premium";
+}
+function getCategoryBadge(category) {
+  switch (category) {
+    case "Budget": return "Budget";
+    case "Standard": return "Standard";
+    case "Premium": return "Premium";
+    default: return "Uncategorized";
+  }
+}
+
+function renderDashboard() {
+  const inventoryBody = document.getElementById("inventoryBody");
+  inventoryBody.replaceChildren();
+
+  // 3. forEach: render all products.
+  inventory.forEach(item => {
+    const row = document.createElement("tr");
+    const nameCell = document.createElement("td");
+    const priceCell = document.createElement("td");
+    const categoryCell = document.createElement("td");
+    const category = getCategoryBadge(getCategory(item.price));
+
+    nameCell.textContent = item.name;
+    priceCell.textContent = new Intl.NumberFormat("en-IN", {
+      style: "currency", currency: "INR"
+    }).format(item.price);
+    const badge = document.createElement("span");
+    badge.className = "badge";
+    badge.textContent = category;
+    categoryCell.appendChild(badge);
+
+    row.append(nameCell, priceCell, categoryCell);
+    inventoryBody.appendChild(row);
+  });
+
+  const total = calculateTotal(inventory);
+  const tax = calculateWithAdjustment(total, 0.18) - total;
+  const discounted = total * (1 - 0.10);
+
+  document.getElementById("productCount").textContent = inventory.length;
+  document.getElementById("totalValue").textContent = formatMoney(total);
+  document.getElementById("taxValue").textContent = formatMoney(tax);
+  document.getElementById("discountValue").textContent = formatMoney(discounted);
+
+  // 4. filter: find products under ₹200.
+  const affordable = inventory.filter(item => item.price < 200);
+  document.getElementById("affordableList").textContent =
+    affordable.length ? affordable.map(item => item.name).join(", ") : "No affordable products.";
+
+  // 5. map: create formatted report strings.
+  const report = inventory.map(item => `${item.name.toUpperCase()}: ${formatMoney(item.price)}`);
+  document.getElementById("formattedReport").textContent = JSON.stringify(report, null, 2);
+}
+
+function formatMoney(amount) {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency", currency: "INR", maximumFractionDigits: 2
+  }).format(amount);
+}
+
+document.getElementById("productForm").addEventListener("submit", function(event) {
+  event.preventDefault();
+  const nameInput = document.getElementById("productName");
+  const priceInput = document.getElementById("productPrice");
+  const name = nameInput.value.trim();
+  const price = Number(priceInput.value);
+  const message = document.getElementById("message");
+
+  // Validation and loop/break/continue examples for checking duplicates.
+  if (!name || !Number.isFinite(price) || price <= 0) {
+    message.textContent = "Please enter a product name and a price greater than zero.";
+    return;
+  }
+
+  let duplicate = false;
+  for (const item of inventory) {
+    if (item.name.toLowerCase() === name.toLowerCase()) {
+      duplicate = true;
+      break;
+    }
+    if (!item.name) continue;
+  }
+  if (duplicate) {
+    message.textContent = "A product with that name already exists. Please use a different name.";
+    return;
+  }
+
+  inventory.push({ name, price });
+  message.style.color = "#166534";
+  message.textContent = `${name} added successfully.`;
+  nameInput.value = "";
+  priceInput.value = "";
+  renderDashboard();
+});
+
+// Local block scope example: this variable is only available inside the block.
+{
+  const dashboardMessage = "Inventory dashboard initialized.";
+  console.log(dashboardMessage);
+}
+
+renderDashboard();
+</script>
+</body>
+</html>
